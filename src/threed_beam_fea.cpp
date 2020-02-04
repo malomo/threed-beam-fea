@@ -35,6 +35,8 @@
 
 #include "threed_beam_fea.h"
 
+#define DEBUG
+
 namespace fea {
 
 namespace {
@@ -126,14 +128,17 @@ void GlobalStiffAssembler::calcKelem(unsigned int i, const Job &job) {
   Klocal(11, 11) = 4.0 * tmp1z;
 
   // calculate unit normal vector along local x-direction
-  Eigen::Vector3d nx = job.nodes[nn2] - job.nodes[nn1];
-  nx.normalize();
-
+  const Eigen::Vector3d nx = (job.nodes[nn2] - job.nodes[nn1]).normalized();
   // calculate unit normal vector along y-direction
   const Eigen::Vector3d ny = job.props[i].normal_vec.normalized();
-
+  // calculate the unit normal vector in local z direction
+  const Eigen::Vector3d nz = nx.cross(ny).normalized();
+  RotationMatrix r;
+  r.row(0) = nx;
+  r.row(1) = ny;
+  r.row(2) = nz;
   // update rotation matrices
-  calcAelem(nx, ny);
+  calcAelem(r);
   AelemT = Aelem.transpose();
 
   std::ofstream KlocalFile("Klocal.csv");
@@ -159,102 +164,12 @@ void GlobalStiffAssembler::calcKelem(unsigned int i, const Job &job) {
   perElemKlocalAelem[i] = KlocalAelem;
 };
 
-void GlobalStiffAssembler::calcAelem(const Eigen::Vector3d &nx,
-                                     const Eigen::Vector3d &ny) {
-  // calculate the unit normal vector in local z direction
-  Eigen::Vector3d nz;
-  nz = nx.cross(ny).normalized();
-
+void GlobalStiffAssembler::calcAelem(const RotationMatrix &r) {
   // update rotation matrix
-  Aelem(0, 0) = nx(0);
-  Aelem(0, 1) = nx(1);
-  Aelem(0, 2) = nx(2);
-  Aelem(1, 0) = ny(0);
-  Aelem(1, 1) = ny(1);
-  Aelem(1, 2) = ny(2);
-  Aelem(2, 0) = nz(0);
-  Aelem(2, 1) = nz(1);
-  Aelem(2, 2) = nz(2);
-
-  Aelem(3, 3) = nx(0);
-  Aelem(3, 4) = nx(1);
-  Aelem(3, 5) = nx(2);
-  Aelem(4, 3) = ny(0);
-  Aelem(4, 4) = ny(1);
-  Aelem(4, 5) = ny(2);
-  Aelem(5, 3) = nz(0);
-  Aelem(5, 4) = nz(1);
-  Aelem(5, 5) = nz(2);
-
-  Aelem(6, 6) = nx(0);
-  Aelem(6, 7) = nx(1);
-  Aelem(6, 8) = nx(2);
-  Aelem(7, 6) = ny(0);
-  Aelem(7, 7) = ny(1);
-  Aelem(7, 8) = ny(2);
-  Aelem(8, 6) = nz(0);
-  Aelem(8, 7) = nz(1);
-  Aelem(8, 8) = nz(2);
-
-  Aelem(9, 9) = nx(0);
-  Aelem(9, 10) = nx(1);
-  Aelem(9, 11) = nx(2);
-  Aelem(10, 9) = ny(0);
-  Aelem(10, 10) = ny(1);
-  Aelem(10, 11) = ny(2);
-  Aelem(11, 9) = nz(0);
-  Aelem(11, 10) = nz(1);
-  Aelem(11, 11) = nz(2);
-
-  //  std::ofstream AelemFile("Aelem.csv");
-  //  if (AelemFile.is_open()) {
-  //    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision,
-  //                                           Eigen::DontAlignCols, ", ",
-  //                                           "\n");
-  //    AelemFile << Aelem.format(CSVFormat) << '\n';
-  //    AelemFile.close();
-  //  }
-
-  // update transposed rotation matrix
-  AelemT(0, 0) = nx(0);
-  AelemT(0, 1) = ny(0);
-  AelemT(0, 2) = nz(0);
-  AelemT(1, 0) = nx(1);
-  AelemT(1, 1) = ny(1);
-  AelemT(1, 2) = nz(1);
-  AelemT(2, 0) = nx(2);
-  AelemT(2, 1) = ny(2);
-  AelemT(2, 2) = nz(2);
-
-  AelemT(3, 3) = nx(0);
-  AelemT(3, 4) = ny(0);
-  AelemT(3, 5) = nz(0);
-  AelemT(4, 3) = nx(1);
-  AelemT(4, 4) = ny(1);
-  AelemT(4, 5) = nz(1);
-  AelemT(5, 3) = nx(2);
-  AelemT(5, 4) = ny(2);
-  AelemT(5, 5) = nz(2);
-
-  AelemT(6, 6) = nx(0);
-  AelemT(6, 7) = ny(0);
-  AelemT(6, 8) = nz(0);
-  AelemT(7, 6) = nx(1);
-  AelemT(7, 7) = ny(1);
-  AelemT(7, 8) = nz(1);
-  AelemT(8, 6) = nx(2);
-  AelemT(8, 7) = ny(2);
-  AelemT(8, 8) = nz(2);
-
-  AelemT(9, 9) = nx(0);
-  AelemT(9, 10) = ny(0);
-  AelemT(9, 11) = nz(0);
-  AelemT(10, 9) = nx(1);
-  AelemT(10, 10) = ny(1);
-  AelemT(10, 11) = nz(1);
-  AelemT(11, 9) = nx(2);
-  AelemT(11, 10) = ny(2);
-  AelemT(11, 11) = nz(2);
+  Aelem.block<3, 3>(0, 0) = r;
+  Aelem.block<3, 3>(3, 3) = r;
+  Aelem.block<3, 3>(6, 6) = r;
+  Aelem.block<3, 3>(9, 9) = r;
 }
 
 std::vector<LocalMatrix> GlobalStiffAssembler::getPerElemKlocalAelem() const {
@@ -475,6 +390,7 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
               << " ms.\nNow preprocessing factorization..." << std::endl;
 
   unsigned int numberOfDoF = DOF::NUM_DOFS * job.nodes.size();
+#ifdef DEBUG
   Eigen::MatrixXd KgNoBCDense(Kg.block(0, 0, numberOfDoF, numberOfDoF));
   std::ofstream kgNoBCFile("KgNoBC.csv");
   if (kgNoBCFile.is_open()) {
@@ -483,8 +399,8 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
     kgNoBCFile << KgNoBCDense.format(CSVFormat) << '\n';
     kgNoBCFile.close();
   }
-  std::cout << KgNoBCDense << std::endl;
-
+//    std::cout << KgNoBCDense << std::endl;
+#endif
   // load prescribed boundary conditions into stiffness matrix and force vector
   loadBCs(Kg, force_vec, BCs, job.nodes.size());
 
@@ -496,14 +412,16 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
   if (forces.size() > 0) {
     loadForces(force_vec, forces);
   }
+#ifdef DEBUG
   Eigen::MatrixXd KgDense(Kg);
-  std::cout << KgDense << std::endl;
+  //    std::cout << KgDense << std::endl;
   Eigen::VectorXd forcesVectorDense(force_vec);
-  std::cout << forcesVectorDense << std::endl;
-
+//    std::cout << forcesVectorDense << std::endl;
+#endif
   // compress global stiffness matrix since all non-zero values have been added.
   Kg.prune(1.e-14);
   Kg.makeCompressed();
+#ifdef DEBUG
   std::ofstream kgFile("Kg.csv");
   if (kgFile.is_open()) {
     const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision,
@@ -518,9 +436,7 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
     forcesFile << forcesVectorDense.format(CSVFormat) << '\n';
     forcesFile.close();
   }
-  Eigen::FullPivLU<Eigen::MatrixXd> lu(Kg);
-  //  assert(lu.isInvertible());
-
+#endif
   // initialize solver based on whether MKL should be used
 #ifdef EIGEN_USE_MKL_ALL
   Eigen::PardisoLU<SparseMat> solver;
@@ -636,6 +552,8 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
   CSVParser csv;
   start_time = std::chrono::high_resolution_clock::now();
   if (options.save_nodal_displacements) {
+    std::cout << "Writing to:" + options.nodal_displacements_filename
+              << std::endl;
     csv.write(options.nodal_displacements_filename, disp_vec,
               options.csv_precision, options.csv_delimiter);
   }
@@ -701,17 +619,23 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
         perElemKlocalAelem[elemIndex] * elemDisps;
     for (int dofIndex = 0; dofIndex < DOF::NUM_DOFS; dofIndex++) {
       summary.element_forces[elemIndex][static_cast<size_t>(dofIndex)] =
-          elemForces(dofIndex);
+          -elemForces(dofIndex);
     }
     // meaning of sign = reference to first node:
     // + = compression for axial, - traction
     for (int dofIndex = DOF::NUM_DOFS; dofIndex < 2 * DOF::NUM_DOFS;
          dofIndex++) {
       summary.element_forces[elemIndex][static_cast<size_t>(dofIndex)] =
-          //-elemForces(dofIndex);
           +elemForces(dofIndex);
     }
   }
+
+  if (options.save_elemental_forces) {
+    std::cout << "Writing to:" + options.elemental_forces_filename << std::endl;
+    csv.write(options.elemental_forces_filename, summary.element_forces,
+              options.csv_precision, options.csv_delimiter);
+  }
+
   return summary;
 };
 
