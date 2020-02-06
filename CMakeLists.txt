@@ -6,8 +6,8 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-option(FEA_BUILD_UNIT_TESTS "Build unit tests" ON)
-option(FEA_BUILD_EXAMPLES "Build examples" ON)
+option(FEA_BUILD_UNIT_TESTS "Build unit tests" OFF)
+option(FEA_BUILD_EXAMPLES "Build examples" OFF)
 option(FEA_BUILD_GUI "Build Qt GUI" OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
