@@ -139,24 +139,8 @@ void GlobalStiffAssembler::calcKelem(unsigned int i, const Job &job) {
   calcAelem(r);
   AelemT = Aelem.transpose();
 
-  std::ofstream KlocalFile("Klocal.csv");
-  if (KlocalFile.is_open()) {
-    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision,
-                                           Eigen::DontAlignCols, ", ", "\n");
-    KlocalFile << Klocal.format(CSVFormat) << '\n';
-    KlocalFile.close();
-  }
   // update Kelem
   Kelem = AelemT * Klocal * Aelem;
-  //  std::ofstream KelemFile("Kelem.csv");
-  //  if (KelemFile.is_open()) {
-  //    const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision,
-  //                                           Eigen::DontAlignCols, ", ",
-  //                                           "\n");
-  //    KelemFile << Kelem.format(CSVFormat) << '\n';
-  //    KelemFile.close();
-  //  }
-
   LocalMatrix KlocalAelem;
   KlocalAelem = Klocal * Aelem;
   perElemKlocalAelem[i] = KlocalAelem;
