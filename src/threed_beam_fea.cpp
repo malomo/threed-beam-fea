@@ -35,8 +35,6 @@
 
 #include "threed_beam_fea.h"
 
-#define DEBUG
-
 namespace fea {
 
 namespace {
@@ -390,7 +388,7 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
               << " ms.\nNow preprocessing factorization..." << std::endl;
 
   unsigned int numberOfDoF = DOF::NUM_DOFS * job.nodes.size();
-#ifdef DEBUG
+#ifdef DEBUG_FILE
   Eigen::MatrixXd KgNoBCDense(Kg.block(0, 0, numberOfDoF, numberOfDoF));
   std::ofstream kgNoBCFile("KgNoBC.csv");
   if (kgNoBCFile.is_open()) {
@@ -412,7 +410,7 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
   if (forces.size() > 0) {
     loadForces(force_vec, forces);
   }
-#ifdef DEBUG
+#ifdef DEBUG_FILE
   Eigen::MatrixXd KgDense(Kg);
   //    std::cout << KgDense << std::endl;
   Eigen::VectorXd forcesVectorDense(force_vec);
@@ -421,7 +419,7 @@ Summary solve(const Job &job, const std::vector<BC> &BCs,
   // compress global stiffness matrix since all non-zero values have been added.
   Kg.prune(1.e-14);
   Kg.makeCompressed();
-#ifdef DEBUG
+#ifdef DEBUG_FILE
   std::ofstream kgFile("Kg.csv");
   if (kgFile.is_open()) {
     const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision,
